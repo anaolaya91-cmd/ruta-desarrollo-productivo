@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Ruta de Desarrollo Productivo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Plugin para mostrar etiquetas de texto directamente sobre las barras -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'plan-blue': '#002855',
+                        'plan-red': '#E31937',
+                        'plan-yellow': '#FFD000',
+                        'plan-cyan': '#00A3E0',
+                        'plan-teal': '#008080',
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        .dashboard-container {
+            width: 100%; max-width: 1380px; height: 880px; background: #f1f5f9; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative; overflow: hidden; border-radius: 16px; display: flex; flex-direction: column;
+        }
+        .view-section {
+            position: absolute; top: 75px; bottom: 0; left: 0; right: 0; opacity: 0; transition: opacity 0.3s ease-in-out;
+            pointer-events: none; display: flex; flex-direction: column; padding: 16px 24px; box-sizing: border-box; overflow-y: auto;
+        }
+        .view-section.active { opacity: 1; pointer-events: auto; }
+        .nav-btn { transition: all 0.2s ease; }
+        .nav-btn.active { background-color: #002855; color: white; border-color: #002855; box-shadow: 0 4px 6px -1px rgba(0, 40, 85, 0.2); }
+        .step-card { cursor: pointer; transition: all 0.2s ease; }
+        .step-card:hover { transform: translateY(-2px); }
+        .step-card.active-step { border-color: #E31937 !important; background-color: #fff5f5 !important; }
+        .level-tab { cursor: pointer; transition: all 0.2s ease; }
+        .level-tab.active-level { border-color: #00A3E0 !important; background-color: #e0f2fe !important; }
+        .ring-card { cursor: pointer; transition: all 0.2s ease; }
+        .ring-card.active-ring { border: 2px solid #FFD000 !important; box-shadow: 0 0 8px rgba(255, 208, 0, 0.6); }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <!-- HEADER -->
+    <header class="bg-white px-6 py-2.5 border-b border-slate-200 flex justify-between items-center z-30 shrink-0 h-[75px]">
+        <div class="flex items-center gap-3">
+            <div class="bg-white border p-1 rounded-xl shadow-sm flex items-center justify-center h-12 px-3">
+                <svg viewBox="0 0 250 55" class="h-8 w-auto">
+                    <text x="5" y="24" font-family="Inter, sans-serif" font-weight="800" font-size="20" fill="#E31937" letter-spacing="-0.5">BOGOTA</text>
+                    <path d="M115 12l4-2 2 4 4-2-2 4 4 2-4 2 2 4-4-2-2 4-4-2 2-4-4-2 4-2z" fill="#FFD000"/>
+                    <path d="M135 8l3-1 1 3 3-1-1 3 3 1-3 1 1 3-3-1-1 3-3-1 1-3-3-1 3-1z" fill="#FFD000"/>
+                    <text x="5" y="44" font-family="Inter, sans-serif" font-weight="600" font-size="11" fill="#E31937">Secretaría de Planeación</text>
+                </svg>
+            </div>
+            <div>
+                <div class="text-[9px] font-extrabold text-gray-400 tracking-wider">DIRECCIÓN DE PLANEACIÓN DE DESARROLLO ECONÓMICO</div>
+                <h1 class="text-sm font-black text-plan-blue tracking-tight">Ruta de Desarrollo Productivo</h1>
+            </div>
+        </div>
+        <!-- Menú Principal -->
+        <nav class="flex gap-2">
+            <button onclick="switchView(0)" class="nav-btn active px-3 py-2 rounded-lg text-xs font-bold border border-slate-200 text-gray-600 hover:bg-slate-100 flex items-center gap-1.5" id="btn-view-0">
+                <i class="fas fa-chart-bar text-plan-red"></i> Resultados ICOP
+            </button>
+            <button onclick="switchView(1)" class="nav-btn px-3 py-2 rounded-lg text-xs font-bold border border-slate-200 text-gray-600 hover:bg-slate-100 flex items-center gap-1.5" id="btn-view-1">
+                <i class="fas fa-home text-plan-blue"></i> Ruta Productiva
+            </button>
+            <button onclick="switchView(2)" class="nav-btn px-3 py-2 rounded-lg text-xs font-bold border border-slate-200 text-gray-600 hover:bg-slate-100 flex items-center gap-1.5" id="btn-view-2">
+                <i class="fas fa-layer-group text-plan-cyan"></i> Evolución
+            </button>
+            <button onclick="switchView(3)" class="nav-btn px-3 py-2 rounded-lg text-xs font-bold border border-slate-200 text-gray-600 hover:bg-slate-100 flex items-center gap-1.5" id="btn-view-3">
+                <i class="fas fa-cogs text-plan-teal"></i> Componentes
+            </button>
+        </nav>
+    </header>
+
+    <!-- ================================================================= -->
+    <!-- VISTA 0: Resultados ICOP                                          -->
+    <!-- ================================================================= -->
+    <section class="view-section active" id="view-0">
+        <div class="border-b pb-2 flex justify-between items-end mb-3 shrink-0">
+            <div>
+                <span class="text-[10px] font-bold text-plan-red uppercase tracking-wider">Resultados ICOP</span>
+                <h2 class="text-base font-extrabold text-plan-blue tracking-tight">Análisis de Entidades, Programas y Focalización</h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-[10px] bg-gray-100 text-gray-600 font-bold px-3 py-1 rounded-lg border">Datos Consolidados</div>
+                <a href="https://public.tableau.com/views/dashboardOPD/ICOPDashboard?:language=es-ES&publish=yes&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link" target="_blank" class="bg-plan-blue hover:bg-blue-800 text-white text-[10px] font-bold px-4 py-1 rounded-lg shadow-sm flex items-center gap-2 transition-colors cursor-pointer border border-blue-900">
+                    <i class="fas fa-external-link-alt"></i> Ver Dashboard Completo
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 mb-3 shrink-0">
+            <div class="bg-white border rounded-xl p-3 shadow-sm flex flex-col justify-between">
+                <h3 class="font-extrabold text-plan-blue text-xs border-b pb-1.5 mb-1.5">Resumen 2023</h3>
+                <div class="flex justify-between items-center text-[11px] mb-1"><span class="text-gray-500 font-medium">Entidades</span><span class="font-bold text-gray-900">11</span></div>
+                <div class="flex justify-between items-center text-[11px] mb-1.5"><span class="text-gray-500 font-medium">Programas</span><span class="font-bold text-gray-900">53</span></div>
+                <div class="flex justify-between items-center text-[11px] text-plan-teal pt-1.5 border-t border-gray-100"><span class="font-bold">Presupuesto</span><span class="font-black">$144.068.446.269</span></div>
+            </div>
+            <div class="bg-white border rounded-xl p-3 shadow-sm flex flex-col justify-between">
+                <h3 class="font-extrabold text-plan-cyan text-xs border-b pb-1.5 mb-1.5">Resumen 2024</h3>
+                <div class="flex justify-between items-center text-[11px] mb-1"><span class="text-gray-500 font-medium">Entidades</span><span class="font-bold text-gray-900">11</span></div>
+                <div class="flex justify-between items-center text-[11px] mb-1.5"><span class="text-gray-500 font-medium">Programas</span><span class="font-bold text-gray-900">48</span></div>
+                <div class="flex justify-between items-center text-[11px] text-plan-teal pt-1.5 border-t border-gray-100"><span class="font-bold">Presupuesto</span><span class="font-black">$126.715.587.227</span></div>
+            </div>
+            <div class="bg-white border rounded-xl p-3 shadow-sm flex flex-col justify-between">
+                <h3 class="font-extrabold text-plan-teal text-xs border-b pb-1.5 mb-1.5">Resumen 2025</h3>
+                <div class="flex justify-between items-center text-[11px] mb-1"><span class="text-gray-500 font-medium">Entidades</span><span class="font-bold text-gray-900">8</span></div>
+                <div class="flex justify-between items-center text-[11px] mb-1.5"><span class="text-gray-500 font-medium">Programas</span><span class="font-bold text-gray-900">36</span></div>
+                <div class="flex justify-between items-center text-[11px] text-plan-teal pt-1.5 border-t border-gray-100"><span class="font-bold">Presupuesto</span><span class="font-black">$116.448.692.300</span></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-3 flex-grow min-h-[300px]">
+            <div class="col-span-5 bg-white border rounded-xl p-3 flex flex-col shadow-sm">
+                <h3 class="font-bold text-plan-blue text-[10px] mb-1 text-center uppercase tracking-wide">Presupuesto Oferta Programática</h3>
+                <p class="text-[8px] text-gray-500 text-center mb-2">Valores en COP</p>
+                <div class="flex-grow relative w-full">
+                    <canvas id="budgetChart"></canvas>
+                </div>
+            </div>
+
+            <div class="col-span-3 bg-white border rounded-xl p-3 flex flex-col shadow-sm">
+                <h3 class="font-bold text-plan-blue text-[10px] mb-1 text-center uppercase tracking-wide">Ámbito Territorial</h3>
+                <p class="text-[8px] text-gray-500 text-center mb-2">Programas Urbano vs Rural</p>
+                <div class="flex-grow relative w-full">
+                    <canvas id="territorialChart"></canvas>
+                </div>
+            </div>
+
+            <div class="col-span-4 bg-white border rounded-xl p-3 flex flex-col shadow-sm">
+                <h3 class="font-bold text-plan-blue text-[10px] mb-1 text-center uppercase tracking-wide">Focalización Poblacional (Cant. Programas)</h3>
+                <p class="text-[8px] text-gray-500 text-center mb-2">Comparativo de programas por grupo</p>
+                <div class="flex-grow relative w-full">
+                    <canvas id="populationChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VISTA 1: Ruta Productiva                                          -->
+    <!-- ================================================================= -->
+    <section class="view-section" id="view-1">
+        <div class="border-b pb-2 flex justify-between items-end mb-2 shrink-0">
+            <div>
+                <span class="text-[10px] font-bold text-plan-blue uppercase tracking-wider">Evolución esperada de la Ruta de Desarrollo Productivo</span>
+                <h2 class="text-base font-extrabold text-plan-blue tracking-tight">De la caracterización inicial de la oferta a la planificación territorial de servicios</h2>
+            </div>
+            <div class="text-[10px] bg-blue-50 text-plan-blue font-bold px-2.5 py-0.5 rounded-lg border">Territorios productivos, más oportunidades para la ciudad</div>
+        </div>
+
+        <div class="grid grid-cols-5 gap-2 mb-2.5 pt-2">
+            <!-- Paso 1 -->
+            <div class="bg-white border border-blue-300 rounded-xl shadow-sm flex flex-col relative overflow-visible mt-2">
+                <div class="absolute -top-3 -left-3 bg-plan-red text-white w-7 h-7 rounded-full font-black flex items-center justify-center text-xs border-2 border-white shadow-md z-20">1</div>
+                <div class="bg-plan-blue text-white p-2 text-center rounded-t-xl">
+                    <div class="text-xs font-black"><i class="fas fa-file-invoice text-plan-yellow"></i> Base actual 2023</div>
+                </div>
+                <div class="p-2.5 flex-grow flex flex-col justify-between text-[9px]">
+                    <div class="space-y-1">
+                        <div class="font-bold text-plan-blue border-b pb-1 mb-1">Metodología base disponible</div>
+                        <div><i class="fas fa-check-circle text-plan-blue"></i> Análisis de oferta programática distrital</div>
+                        <div><i class="fas fa-check-circle text-plan-blue"></i> Demanda potencial y caracterización</div>
+                        <div><i class="fas fa-check-circle text-plan-blue"></i> Recomendaciones 0–4</div>
+                    </div>
+                    <div class="mt-2 bg-blue-50 p-1.5 rounded border border-blue-200 text-center font-bold text-plan-blue">
+                        <i class="fas fa-chart-line"></i> Hito actual: nivel 5 → servicios modulares
+                    </div>
+                </div>
+                <div class="bg-slate-100 text-center py-1 text-[8px] font-bold text-gray-600 border-t rounded-b-xl">
+                    PUNTO DE PARTIDA <br><span class="font-normal text-[7px]">Una base sólida para avanzar</span>
+                </div>
+            </div>
+
+            <!-- Paso 2 -->
+            <div class="bg-white border border-teal-300 rounded-xl shadow-sm flex flex-col relative overflow-visible mt-2">
+                <div class="absolute -top-3 -left-3 bg-plan-red text-white w-7 h-7 rounded-full font-black flex items-center justify-center text-xs border-2 border-white shadow-md z-20">2</div>
+                <div class="bg-teal-700 text-white p-2 text-center rounded-t-xl">
+                    <div class="text-xs font-black"><i class="fas fa-cubes text-plan-yellow"></i> Siguiente ampliación</div>
+                </div>
+                <div class="p-2.5 flex-grow flex flex-col justify-between text-[9px]">
+                    <div class="space-y-1.5">
+                        <div class="font-bold text-teal-800 border-b pb-1 mb-1">Ampliación de cobertura y oferta</div>
+                        <div><i class="fas fa-check-circle text-teal-700"></i> Oferta de desarrollo productivo</div>
+                        <div><i class="fas fa-check-circle text-teal-700"></i> Oferta de empleabilidad distrital</div>
+                        <div><i class="fas fa-check-circle text-teal-700"></i> Mayor articulación programática</div>
+                    </div>
+                </div>
+                <div class="bg-slate-100 text-center py-1 text-[8px] font-bold text-gray-600 border-t rounded-b-xl">
+                    MAYOR COBERTURA <br><span class="font-normal text-[7px]">Más oferta, más conexiones</span>
+                </div>
+            </div>
+
+            <!-- Paso 3 -->
+            <div class="bg-white border border-cyan-300 rounded-xl shadow-sm flex flex-col relative overflow-visible mt-2">
+                <div class="absolute -top-3 -left-3 bg-plan-red text-white w-7 h-7 rounded-full font-black flex items-center justify-center text-xs border-2 border-white shadow-md z-20">3</div>
+                <div class="bg-plan-cyan text-white p-2 text-center rounded-t-xl">
+                    <div class="text-xs font-black"><i class="fas fa-map-marked-alt text-plan-yellow"></i> Escala local</div>
+                </div>
+                <div class="p-2.5 flex-grow flex flex-col justify-between text-[9px]">
+                    <div class="space-y-1.5">
+                        <div class="font-bold text-cyan-900 border-b pb-1 mb-1">Enfoque territorial</div>
+                        <div><i class="fas fa-check-circle text-cyan-700"></i> Análisis por localidades</div>
+                        <div><i class="fas fa-check-circle text-cyan-700"></i> Desarrollo productivo + empleabilidad</div>
+                        <div><i class="fas fa-check-circle text-cyan-700"></i> Lectura territorial diferenciada</div>
+                    </div>
+                </div>
+                <div class="bg-slate-100 text-center py-1 text-[8px] font-bold text-gray-600 border-t rounded-b-xl">
+                    TERRITORIOS CON IDENTIDAD <br><span class="font-normal text-[7px]">Soluciones para cada realidad</span>
+                </div>
+            </div>
+
+            <!-- Paso 4 -->
+            <div class="bg-white border border-teal-500 rounded-xl shadow-sm flex flex-col relative overflow-visible mt-2">
+                <div class="absolute -top-3 -left-3 bg-plan-red text-white w-7 h-7 rounded-full font-black flex items-center justify-center text-xs border-2 border-white shadow-md z-20">4</div>
+                <div class="bg-teal-800 text-white p-2 text-center rounded-t-xl">
+                    <div class="text-xs font-black"><i class="fas fa-network-wired text-plan-yellow"></i> Armonización multinivel</div>
+                </div>
+                <div class="p-2.5 flex-grow flex flex-col justify-between text-[9px]">
+                    <div class="space-y-1.5">
+                        <div class="font-bold text-teal-900 border-b pb-1 mb-1">Integración sistémica</div>
+                        <div><i class="fas fa-check-circle text-teal-800"></i> Oferta nacional no articulada</div>
+                        <div><i class="fas fa-check-circle text-teal-800"></i> Relación local – metropolitana – regional</div>
+                        <div><i class="fas fa-check-circle text-teal-800"></i> Complementariedad institucional</div>
+                    </div>
+                </div>
+                <div class="bg-slate-100 text-center py-1 text-[8px] font-bold text-gray-600 border-t rounded-b-xl">
+                    INTEGRACIÓN TERRITORIAL <br><span class="font-normal text-[7px]">Un ecosistema articulado</span>
+                </div>
+            </div>
+
+            <!-- Paso 5 -->
+            <div class="bg-white border border-emerald-400 rounded-xl shadow-sm flex flex-col relative overflow-visible mt-2">
+                <div class="absolute -top-3 -left-3 bg-plan-red text-white w-7 h-7 rounded-full font-black flex items-center justify-center text-xs border-2 border-white shadow-md z-20">5</div>
+                <div class="bg-emerald-700 text-white p-2 text-center rounded-t-xl">
+                    <div class="text-xs font-black"><i class="fas fa-bullseye text-plan-yellow"></i> Planificación integral</div>
+                </div>
+                <div class="p-2.5 flex-grow flex flex-col justify-between text-[9px]">
+                    <div class="space-y-1.5">
+                        <div class="font-bold text-emerald-900 border-b pb-1 mb-1">Desarrollo económico</div>
+                        <div><i class="fas fa-check-circle text-emerald-700"></i> Servicios modulares</div>
+                        <div><i class="fas fa-check-circle text-emerald-700"></i> Dotacionales productivos</div>
+                        <div><i class="fas fa-check-circle text-emerald-700"></i> Equilibrio con oferta privada y 3er sector</div>
+                        <div><i class="fas fa-check-circle text-emerald-700"></i> Costo-eficiencia e idoneidad</div>
+                    </div>
+                </div>
+                <div class="bg-slate-100 text-center py-1 text-[8px] font-bold text-gray-600 border-t rounded-b-xl">
+                    MAYOR IMPACTO <br><span class="font-normal text-[7px]">Servicios pertinentes y sostenibles</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-3 shrink-0">
+            <div class="col-span-6 bg-plan-blue text-white p-3 rounded-xl shadow-sm flex flex-col justify-between">
+                <div class="flex items-center gap-2 border-b border-blue-900 pb-1.5 mb-1.5">
+                    <i class="fas fa-bullseye text-plan-yellow text-base"></i>
+                    <h3 class="font-extrabold text-xs uppercase tracking-wide">Propósito Estratégico</h3>
+                </div>
+                <p class="text-[10px] leading-relaxed text-blue-100">
+                    Planificar el acceso efectivo a la oferta pública de desarrollo económico según realidades territoriales, necesidades de los usuarios y transformaciones del tejido productivo.
+                </p>
+            </div>
+
+            <div class="col-span-6 bg-white border border-slate-200 p-3 rounded-xl shadow-sm flex flex-col justify-between">
+                <div class="flex items-center gap-2 border-b pb-1.5 mb-1.5">
+                    <i class="fas fa-chart-line text-plan-teal text-base"></i>
+                    <h3 class="font-extrabold text-xs text-plan-blue uppercase tracking-wide">Horizonte de Evolución</h3>
+                </div>
+                <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-700">
+                    <div><i class="fas fa-check-circle text-teal-700"></i> Planificación de largo plazo</div>
+                    <div><i class="fas fa-check-circle text-teal-700"></i> Articulación con POT y Modelo de Ocupación</div>
+                    <div><i class="fas fa-check-circle text-teal-700"></i> Mejora del diseño de servicios e instrumentos</div>
+                    <div><i class="fas fa-check-circle text-teal-700"></i> Orientación de la inversión para mayor impacto</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VISTA 2: Evolución (Con Mapas Ilustrados y Muñecos Interactivos)  -->
+    <!-- ================================================================= -->
+    <section class="view-section" id="view-2">
+        <div class="border-b pb-1.5 mb-2.5 flex justify-between items-end shrink-0">
+            <div>
+                <span class="text-[10px] font-bold text-plan-cyan uppercase tracking-wider">Capas complementarias y anillos de expansión</span>
+                <h2 class="text-base font-extrabold text-plan-blue">Evolución de la Ruta de Desarrollo Productivo</h2>
+            </div>
+            <div class="text-[10px] text-gray-500 font-medium">Hacia una planeación territorial robusta del desarrollo económico</div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-3 pb-4">
+            <!-- Columna Izquierda: Tres Niveles con Ilustraciones y Mapa de Bogotá -->
+            <div class="col-span-7 bg-white border rounded-xl p-3.5 shadow-sm flex flex-col justify-between">
+                <h3 class="text-xs font-extrabold text-plan-blue mb-2.5 flex items-center gap-2 border-b pb-1.5">
+                    <i class="fas fa-layer-group text-plan-cyan"></i> Tres Niveles de Evolución de la Ruta
+                </h3>
+
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <div onclick="selectEvolutionLevel(1)" class="level-tab active-level bg-blue-50 border-2 border-plan-blue rounded-xl p-2.5 cursor-pointer text-center shadow-xs flex flex-col items-center gap-1" id="lvl-tab-1">
+                        <div class="w-7 h-7 rounded-full bg-plan-blue text-white flex items-center justify-center text-xs"><i class="fas fa-file-alt"></i></div>
+                        <div class="text-[9px] font-extrabold text-plan-blue uppercase">Nivel 1</div>
+                        <div class="text-[10px] font-bold text-gray-800">Avance Actual</div>
+                    </div>
+                    <div onclick="selectEvolutionLevel(2)" class="level-tab bg-white border border-slate-200 rounded-xl p-2.5 cursor-pointer text-center shadow-xs flex flex-col items-center gap-1" id="lvl-tab-2">
+                        <div class="w-7 h-7 rounded-full bg-cyan-700 text-white flex items-center justify-center text-xs"><i class="fas fa-users"></i></div>
+                        <div class="text-[9px] font-extrabold text-cyan-700 uppercase">Nivel 2</div>
+                        <div class="text-[10px] font-bold text-gray-800">Siguiente Desarrollo</div>
+                    </div>
+                    <div onclick="selectEvolutionLevel(3)" class="level-tab bg-white border border-slate-200 rounded-xl p-2.5 cursor-pointer text-center shadow-xs flex flex-col items-center gap-1" id="lvl-tab-3">
+                        <div class="w-7 h-7 rounded-full bg-teal-700 text-white flex items-center justify-center text-xs"><i class="fas fa-map-marked-alt"></i></div>
+                        <div class="text-[9px] font-extrabold text-teal-700 uppercase">Nivel 3</div>
+                        <div class="text-[10px] font-bold text-gray-800">Evolución Estratégica</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 border rounded-xl p-3 flex-grow text-[10px] flex flex-col justify-between relative overflow-hidden" id="evolution-level-content">
+                    <!-- Mapa estilizado de fondo para el Nivel 3 -->
+                    <div id="bg-map-illustration" class="absolute right-2 bottom-2 opacity-15 pointer-events-none text-teal-900 text-6xl hidden">
+                        <i class="fas fa-map"></i>
+                    </div>
+                    <div>
+                        <div class="font-extrabold text-plan-blue text-xs mb-1 flex items-center gap-1.5" id="lvl-title">
+                            <i class="fas fa-file-alt text-plan-blue"></i> Nivel 1: Análisis de oferta programática
+                        </div>
+                        <p class="text-gray-700 mb-2" id="lvl-desc">Punto de partida ya desarrollado para comprender la oferta pública de desarrollo económico y formular recomendaciones iniciales.</p>
+                        <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-200" id="lvl-features">
+                            <div><i class="fas fa-check-circle text-plan-blue"></i> Caracterización de programas, instrumentos y servicios</div>
+                            <div><i class="fas fa-check-circle text-plan-blue"></i> Identificación de complementariedades y vacíos</div>
+                            <div><i class="fas fa-check-circle text-plan-blue"></i> Niveles 0–5 de recomendación</div>
+                            <div><i class="fas fa-check-circle text-plan-blue"></i> Base metodológica construida desde 2023</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 bg-blue-100/60 p-2 rounded-lg text-plan-blue font-semibold text-center" id="lvl-footer">
+                        <i class="fas fa-bullseye"></i> Foco actual: oferta central distrital
+                    </div>
+                </div>
+
+                <div class="mt-3 bg-cyan-50/70 border border-cyan-100 p-2 rounded-xl text-[9px] flex justify-between items-center text-cyan-900 font-semibold">
+                    <span><i class="fas fa-arrow-up text-plan-cyan"></i> <strong>Lógica acumulativa:</strong> Oferta programática &rarr; Necesidades y beneficiarios &rarr; Servicios modulares territoriales</span>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Anillos de Expansión con Muñecos e Iconos -->
+            <div class="col-span-5 flex flex-col gap-3">
+                <div class="bg-white border rounded-xl p-3 shadow-sm">
+                    <h3 class="text-xs font-extrabold text-plan-blue mb-2 flex items-center gap-2 border-b pb-1">
+                        <i class="fas fa-bullseye text-plan-teal"></i> Anillos de Expansión de Alcance (2023 - 2027)
+                    </h3>
+                    <div class="grid grid-cols-3 gap-1.5 text-center text-[9px] mb-2">
+                        <div onclick="selectRingCard(1)" class="ring-card active-ring bg-plan-blue text-white font-bold p-1.5 rounded-lg cursor-pointer shadow-xs flex items-center justify-center gap-1" id="rc-1"><i class="fas fa-circle text-[6px] text-yellow-300"></i> 1. Núcleo</div>
+                        <div onclick="selectRingCard(2)" class="ring-card bg-teal-700 text-white font-bold p-1.5 rounded-lg cursor-pointer shadow-xs flex items-center justify-center gap-1" id="rc-2"><i class="fas fa-briefcase text-[8px]"></i> 2. Temática</div>
+                        <div onclick="selectRingCard(3)" class="ring-card bg-teal-700 text-white font-bold p-1.5 rounded-lg cursor-pointer shadow-xs flex items-center justify-center gap-1" id="rc-3"><i class="fas fa-map-marker-alt text-[8px]"></i> 3. Territorial</div>
+                        <div onclick="selectRingCard(4)" class="ring-card bg-teal-600 text-white font-bold p-1.5 rounded-lg cursor-pointer shadow-xs flex items-center justify-center gap-1" id="rc-4"><i class="fas fa-network-wired text-[8px]"></i> 4. Multinivel</div>
+                        <div onclick="selectRingCard(5)" class="ring-card bg-emerald-600 text-white font-bold p-1.5 rounded-lg cursor-pointer shadow-xs flex items-center justify-center gap-1" id="rc-5"><i class="fas fa-cubes text-[8px]"></i> 5. Avanzada</div>
+                        <div onclick="selectRingCard(6)" class="ring-card bg-emerald-700 text-white font-bold p-1.5 rounded-lg cursor-pointer shadow-xs flex items-center justify-center gap-1" id="rc-6"><i class="fas fa-star text-[8px]"></i> 6. Horizonte</div>
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-lg border text-[9px] text-gray-700 flex items-center gap-2">
+                        <div class="text-plan-blue text-lg"><i class="fas fa-compass"></i></div>
+                        <div id="ring-card-desc">
+                            <strong>1. Núcleo 2023:</strong> Metodología base de análisis de oferta programática (ICOP • Triangulación • Recomendaciones iniciales).
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-white border rounded-xl p-2.5 shadow-sm text-[9px]">
+                        <div class="font-bold text-plan-blue border-b pb-1 mb-1 flex items-center gap-1">
+                            <i class="fas fa-box-open text-plan-blue"></i> Lo ya disponible / Cierre
+                        </div>
+                        <ul class="text-gray-700 space-y-0.5">
+                            <li><i class="fas fa-check text-green-600"></i> Ruta 2023 remitida a SDDE</li>
+                            <li><i class="fas fa-check text-green-600"></i> Productos en cierre: Ruta 2024-2025</li>
+                            <li><i class="fas fa-check text-green-600"></i> Análisis interanual 2026</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white border rounded-xl p-2.5 shadow-sm text-[9px]">
+                        <div class="font-bold text-plan-red border-b pb-1 mb-1 flex items-center gap-1">
+                            <i class="fas fa-flag-checkered text-plan-red"></i> Propósito Final
+                        </div>
+                        <ul class="text-gray-700 space-y-0.5">
+                            <li><i class="fas fa-check text-green-600"></i> Costo-eficiencia en la oferta</li>
+                            <li><i class="fas fa-check text-green-600"></i> Servicios más idóneos</li>
+                            <li><i class="fas fa-check text-green-600"></i> Transformación del tejido productivo</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-plan-blue text-white p-2 rounded-xl text-center text-[10px] font-medium shadow-sm shrink-0 flex items-center justify-center gap-2">
+            <i class="fas fa-city text-plan-yellow text-base"></i>
+            <span>La Ruta evoluciona desde el análisis de oferta hacia una herramienta de planificación territorial e integración de servicios para el desarrollo económico.</span>
+        </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VISTA 3: Componentes                                              -->
+    <!-- ================================================================= -->
+    <section class="view-section" id="view-3">
+        <div class="border-b pb-1.5 mb-3 shrink-0">
+            <h2 class="text-sm font-extrabold text-plan-blue">Componentes Metodológicos Detallados (Infografías Oficiales)</h2>
+            <p class="text-[10px] text-gray-500">Información exhaustiva con nombres literales, fuentes completas y detalles exactos de los 4 componentes.</p>
+        </div>
+
+        <div class="flex flex-col gap-3 pb-4">
+            
+            <!-- COMPONENTE 1: OFERTA PROGRAMÁTICA (ICOP) -->
+            <div class="bg-white border rounded-xl p-3.5 shadow-sm">
+                <h3 class="font-extrabold text-plan-blue text-xs mb-2.5 flex items-center gap-2 border-b pb-1.5">
+                    <i class="fas fa-file-alt text-plan-blue text-base"></i> C1: Caracterización de la Oferta Programática – Evolución Metodológica del ICOP (2023 - 2025)
+                </h3>
+                <div class="grid grid-cols-3 gap-2.5 text-[10px]">
+                    <div class="bg-blue-50/70 p-2.5 rounded-lg border border-blue-100 flex flex-col justify-between">
+                        <div>
+                            <div class="font-bold text-plan-blue mb-1"><i class="fas fa-clipboard-list"></i> 2023: ICOP – Versión Inicial</div>
+                            <ul class="text-gray-700 list-disc pl-3 space-y-0.5">
+                                <li><strong>Estructura base:</strong> 36 preguntas, 4 módulos de información.</li>
+                                <li>Caracterización de programas e instrumentos.</li>
+                                <li>Base metodológica para aplicaciones siguientes.</li>
+                            </ul>
+                        </div>
+                        <div class="mt-2 pt-1.5 border-t border-blue-200 text-[9px] font-semibold text-blue-900">
+                            <i class="fas fa-users"></i> 12 entidades &nbsp;&nbsp;|&nbsp;&nbsp; <i class="fas fa-chart-bar"></i> 53 programas
+                        </div>
+                    </div>
+                    <div class="bg-cyan-50/70 p-2.5 rounded-lg border border-cyan-100 flex flex-col justify-between">
+                        <div>
+                            <div class="font-bold text-cyan-800 mb-1"><i class="fas fa-cogs"></i> 2024: Ajustes Metodológicos</div>
+                            <ul class="text-gray-700 list-disc pl-3 space-y-0.5">
+                                <li>Se mantiene la estructura base del ICOP.</li>
+                                <li>Se incorpora el <strong>Módulo 5 – Empleabilidad</strong>.</li>
+                                <li>Preguntas sobre poblaciones objetivo y modalidades de provisión.</li>
+                            </ul>
+                        </div>
+                        <div class="mt-2 pt-1.5 border-t border-cyan-200 text-[9px] font-semibold text-cyan-900">
+                            <i class="fas fa-users"></i> 12 entidades &nbsp;&nbsp;|&nbsp;&nbsp; <i class="fas fa-chart-bar"></i> 48 programas
+                        </div>
+                    </div>
+                    <div class="bg-teal-50/70 p-2.5 rounded-lg border border-teal-100 flex flex-col justify-between">
+                        <div>
+                            <div class="font-bold text-teal-800 mb-1"><i class="fas fa-star"></i> 2025: Ajuste Estructural</div>
+                            <ul class="text-gray-700 list-disc pl-3 space-y-0.5">
+                                <li>Se elimina el módulo de empleabilidad.</li>
+                                <li>Se adopta el nuevo ciclo de vida del <strong>DIME</strong>.</li>
+                                <li>Actualización de preguntas del ciclo de vida (Ideación, Nacimiento, Crecimiento, Aceleración, Madurez).</li>
+                            </ul>
+                        </div>
+                        <div class="mt-2 pt-1.5 border-t border-teal-200 text-[9px] font-semibold text-teal-900">
+                            <i class="fas fa-users"></i> 12 entidades &nbsp;&nbsp;|&nbsp;&nbsp; <i class="fas fa-chart-bar"></i> 8 respuestas
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMPONENTE 2: ANÁLISIS DE NECESIDADES -->
+            <div class="bg-white border rounded-xl p-3.5 shadow-sm">
+                <h3 class="font-extrabold text-plan-blue text-xs mb-2.5 flex items-center gap-2 border-b pb-1.5">
+                    <i class="fas fa-users text-plan-cyan text-base"></i> Componente 2: Análisis de Necesidades – Caracterización de las necesidades del tejido empresarial (2023)
+                </h3>
+                <div class="grid grid-cols-12 gap-3 text-[10px]">
+                    <div class="col-span-4 flex flex-col gap-2">
+                        <div class="bg-cyan-50/70 p-2.5 rounded-lg border border-cyan-100">
+                            <div class="font-bold text-cyan-900 mb-1"><i class="fas fa-bullseye text-plan-cyan"></i> Objetivo:</div>
+                            <p class="text-gray-700 leading-relaxed">Identificar y analizar las necesidades del tejido empresarial del Distrito, como insumo para la triangulación con la oferta programática y la formulación de recomendaciones que fortalezcan el desarrollo productivo de unidades urbanas y rurales.</p>
+                        </div>
+                        <div class="bg-gray-50 p-2.5 rounded-lg border">
+                            <div class="font-bold text-plan-blue mb-1"><i class="fas fa-filter text-plan-cyan"></i> Enfoque de Análisis:</div>
+                            <ul class="text-gray-700 list-disc pl-3 space-y-0.5">
+                                <li>Urbano y rural.</li>
+                                <li>Enfoque poblacional.</li>
+                                <li>Formalidad.</li>
+                                <li>Diferenciación por tamaño y tipo de unidad productiva.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-span-5 bg-gray-50 p-2.5 rounded-lg border">
+                        <div class="font-bold text-plan-blue mb-1.5"><i class="fas fa-book-open text-plan-cyan"></i> Fuentes Utilizadas (Revisión integral de 14 fuentes):</div>
+                        <div class="space-y-1 text-gray-700">
+                            <div><strong>Políticas Nacionales (3):</strong>
+                                <ul class="list-disc pl-3 text-[9px]">
+                                    <li>Política nacional de desarrollo productivo (CONPES 3866 de 2016)</li>
+                                    <li>Política nacional de formalización empresarial (CONPES 3956 de 2019)</li>
+                                    <li>Política nacional de emprendimiento (CONPES 4011 de 2020)</li>
+                                </ul>
+                            </div>
+                            <div><strong>Políticas Distritales (5):</strong>
+                                <ul class="list-disc pl-3 text-[9px]">
+                                    <li>Política Distrital de Productividad, Competitividad... (CONPES Distrital 25 de 2023)</li>
+                                    <li>Política Distrital de Economía cultural y creativa (CONPES Distrital 2 de 2019)</li>
+                                    <li>Política Pública Distrital de Vendedoras y Vendedores Informales (CONPES Distrital 32 de 2023)</li>
+                                    <li>Política Distrital de Ruralidad (CONPES Distrital 41 de 2023)</li>
+                                    <li>Política Pública de Ciencia, Tecnología e Innovación... (CONPES Distrital 4 de 2019)</li>
+                                </ul>
+                            </div>
+                            <div><strong>Planes y estrategias con enfoque rural (5):</strong> PND 2022-2026, Plan Nacional de Comercialización (PNC), PNGI, PNAT y PNESCR (Minagricultura).</div>
+                            <div><strong>Índices y mediciones (1):</strong> Índice Multidimensional de Robustez de Micronegocios (IMICRO - DANE).</div>
+                        </div>
+                    </div>
+                    <div class="col-span-3 bg-cyan-50/70 p-2.5 rounded-lg border border-cyan-100 flex flex-col justify-between">
+                        <div>
+                            <div class="font-bold text-cyan-900 mb-1"><i class="fas fa-poll text-plan-cyan"></i> Resultados:</div>
+                            <ul class="text-gray-700 list-disc pl-3 space-y-1">
+                                <li><strong>113 necesidades</strong> identificadas y revisadas.</li>
+                                <li>Depuración y consolidación a <strong>92 necesidades prioritarias</strong>.</li>
+                                <li>Clasificación por ciclo de vida, ámbito, área temática y dimensiones.</li>
+                            </ul>
+                        </div>
+                        <div class="mt-2 bg-white p-1.5 rounded border border-cyan-200 text-[9px] text-cyan-900 font-medium">
+                            <i class="fas fa-check-circle text-plan-teal"></i> Insumo crítico para la triangulación y formulación de recomendaciones pertinentes y focalizadas.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMPONENTE 3: TRIANGULACIÓN -->
+            <div class="bg-white border rounded-xl p-3.5 shadow-sm">
+                <h3 class="font-extrabold text-plan-blue text-xs mb-2.5 flex items-center gap-2 border-b pb-1.5">
+                    <i class="fas fa-random text-plan-teal text-base"></i> Componente 3: Triangulación – Entre la oferta programática y las necesidades de la demanda (2023)
+                </h3>
+                <div class="mb-2 text-[10px] bg-teal-50/70 p-2 rounded-lg border border-teal-100">
+                    <strong>¿Cómo se desarrolla el análisis en 2023?:</strong> Cada necesidad del tejido empresarial es analizada frente a la totalidad de la oferta programática para determinar su nivel de atención y generar insumos para la toma de decisiones.
+                </div>
+                <div class="grid grid-cols-3 gap-2.5 text-[10px]">
+                    <div class="bg-white p-2.5 rounded-lg border shadow-xs">
+                        <div class="font-bold text-teal-900 mb-1"><i class="fas fa-link"></i> 1. Relación oferta – necesidades</div>
+                        <ul class="text-gray-700 list-disc pl-3 space-y-0.5">
+                            <li>Se analiza cada programa reportado en el ICOP 2023.</li>
+                            <li>Se revisan objetivos, acciones, modalidades, beneficiarios y atributos.</li>
+                            <li>Se determina qué necesidades atiende cada programa.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-2.5 rounded-lg border shadow-xs">
+                        <div class="font-bold text-teal-900 mb-1"><i class="fas fa-bullseye"></i> 2. Determinación de necesidades atendidas</div>
+                        <ul class="text-gray-700 list-disc pl-3 space-y-0.5">
+                            <li>Para cada una de las 92 necesidades prioritarias se identifica si es atendida y cuántos programas lo hacen.</li>
+                            <li>Qué entidades ofrecen acciones.</li>
+                            <li>En qué etapa del ciclo de vida y ámbito territorial (urbano/rural) se concentra.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-2.5 rounded-lg border shadow-xs">
+                        <div class="font-bold text-teal-900 mb-1"><i class="fas fa-search-minus"></i> 3. Identificación de brechas</div>
+                        <ul class="text-gray-700 list-disc pl-3 space-y-0.5">
+                            <li><span class="text-green-700 font-bold">Ampliamente atendidas</span> (varios programas).</li>
+                            <li><span class="text-amber-700 font-bold">Parcialmente atendidas</span> (uno o pocos programas).</li>
+                            <li><span class="text-red-700 font-bold">Sin oferta o baja cobertura</span>. Se identifican duplicidades en la oferta institucional.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-2.5 bg-teal-50/50 p-2 rounded-lg border border-teal-100 text-[10px] text-teal-900">
+                    <strong>Evolución 2024–2025:</strong> En 2024 se actualiza con ICOP 2024 manteniendo la metodología; en 2025 (segunda iteración) se incorpora el ciclo de vida DIME (5 etapas) y se reorganiza el análisis.
+                </div>
+            </div>
+
+            <!-- COMPONENTE 4: CONCLUSIONES Y RECOMENDACIONES -->
+            <div class="bg-white border rounded-xl p-3.5 shadow-sm">
+                <div class="flex justify-between items-center border-b pb-1.5 mb-3">
+                    <h3 class="font-extrabold text-plan-blue text-xs flex items-center gap-2">
+                        <i class="fas fa-lightbulb text-plan-red text-base"></i> Componente 4: Conclusiones y Recomendaciones – Resultado del análisis para el fortalecimiento de la oferta programática
+                    </h3>
+                    <span class="text-[9px] bg-red-50 text-plan-red font-bold px-2 py-0.5 rounded border border-red-200">Aplicación metodológica 2023</span>
+                </div>
+
+                <div class="grid grid-cols-12 gap-3 text-[10px]">
+                    <div class="col-span-6 bg-blue-50/40 p-3 rounded-xl border border-blue-100 flex flex-col justify-between">
+                        <div>
+                            <div class="font-extrabold text-plan-blue mb-2 text-xs flex items-center gap-1.5">
+                                <i class="fas fa-file-invoice text-plan-blue"></i> Conclusiones <span class="font-normal text-[9px] text-gray-500">(Sintetizan los hallazgos del análisis realizado)</span>
+                            </div>
+                            <div class="space-y-2.5">
+                                <div class="bg-white p-2 rounded-lg border border-blue-100">
+                                    <div class="font-bold text-plan-blue mb-1">1. Se fundamentan en:</div>
+                                    <p class="text-gray-700 mb-1">Integración de los resultados de los tres componentes de la metodología:</p>
+                                    <div class="grid grid-cols-3 gap-1 text-[8px] text-center font-semibold text-gray-700 mt-1">
+                                        <div class="bg-blue-50 p-1 rounded border">Caracterización ICOP</div>
+                                        <div class="bg-blue-50 p-1 rounded border">Análisis de necesidades</div>
+                                        <div class="bg-blue-50 p-1 rounded border">Triangulación oferta-necesidades</div>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-2 rounded-lg border border-blue-100">
+                                    <div class="font-bold text-plan-blue mb-1">2. Principales resultados <span class="font-normal text-[9px] text-gray-500">(A partir del análisis integrado se identifican):</span></div>
+                                    <ul class="text-gray-700 space-y-1">
+                                        <li><i class="fas fa-check-circle text-plan-blue"></i> Cobertura de la oferta frente a las necesidades.</li>
+                                        <li><i class="fas fa-check-circle text-plan-blue"></i> Brechas y vacíos de atención.</li>
+                                        <li><i class="fas fa-check-circle text-plan-blue"></i> Comportamiento por etapa del ciclo de vida empresarial.</li>
+                                        <li><i class="fas fa-check-circle text-plan-blue"></i> Resultados diferenciados por ámbito urbano y rural.</li>
+                                        <li><i class="fas fa-check-circle text-plan-blue"></i> Aspectos prioritarios para el fortalecimiento de la oferta.</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-white p-2 rounded-lg border border-blue-100">
+                                    <div class="font-bold text-plan-blue mb-1">3. Aporte:</div>
+                                    <p class="text-gray-700">Consolidan la evidencia técnica del ejercicio metodológico y orientan la priorización de acciones para el fortalecimiento de la oferta programática distrital.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-6 bg-teal-50/40 p-3 rounded-xl border border-teal-100 flex flex-col justify-between">
+                        <div>
+                            <div class="font-extrabold text-teal-800 mb-2 text-xs flex items-center gap-1.5">
+                                <i class="fas fa-lightbulb text-teal-700"></i> Recomendaciones <span class="font-normal text-[9px] text-gray-500">(Orientan acciones para una oferta más pertinente y efectiva)</span>
+                            </div>
+                            <div class="space-y-2.5">
+                                <div class="bg-white p-2 rounded-lg border border-teal-100">
+                                    <div class="font-bold text-teal-900 mb-1">1. Insumos utilizados:</div>
+                                    <div class="grid grid-cols-5 gap-1 text-[8px] text-center font-semibold text-gray-700">
+                                        <div class="bg-teal-50 p-1 rounded border">Resultados triangulación</div>
+                                        <div class="bg-teal-50 p-1 rounded border">Metodología ArCo (DNP)</div>
+                                        <div class="bg-teal-50 p-1 rounded border">Encuesta expertos</div>
+                                        <div class="bg-teal-50 p-1 rounded border">Encuesta focalización</div>
+                                        <div class="bg-teal-50 p-1 rounded border">Buenas prácticas y detonantes</div>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-2 rounded-lg border border-teal-100">
+                                    <div class="font-bold text-teal-900 mb-1.5">2. Tipos de recomendaciones:</div>
+                                    <div class="grid grid-cols-3 gap-1.5 text-[9px]">
+                                        <div class="bg-slate-50 p-2 rounded border">
+                                            <div class="font-bold text-plan-blue mb-1"><i class="fas fa-cogs"></i> Generales</div>
+                                            <ul class="text-gray-700 space-y-0.5 text-[8px]">
+                                                <li>• Ajustes en diseño de oferta</li>
+                                                <li>• Ampliación de cobertura</li>
+                                                <li>• Mejora en criterios de focalización</li>
+                                                <li>• Fortalecimiento de programas</li>
+                                            </ul>
+                                        </div>
+                                        <div class="bg-slate-50 p-2 rounded border">
+                                            <div class="font-bold text-teal-800 mb-1"><i class="fas fa-network-wired"></i> Articulación ArCo</div>
+                                            <div class="text-[8px] text-gray-700 space-y-0.5">
+                                                <div><strong>0-3:</strong> Renunciar, fusionar, integrar, empaquetar</div>
+                                                <div><strong>4-5:</strong> Rutas de articulación y <span class="text-plan-red font-bold">Servicios modulares</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="bg-slate-50 p-2 rounded border">
+                                            <div class="font-bold text-emerald-800 mb-1"><i class="fas fa-star"></i> Buenas prácticas</div>
+                                            <ul class="text-gray-700 space-y-0.5 text-[8px]">
+                                                <li>• Experiencias exitosas</li>
+                                                <li>• Factores de crecimiento</li>
+                                                <li>• Elementos replicables</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white p-2 rounded-lg border border-teal-100">
+                                    <div class="font-bold text-teal-900 mb-1">3. Aporte:</div>
+                                    <p class="text-gray-700">Proponen acciones concretas para mejorar el diseño de la oferta, fortalecer la articulación entre entidades y facilitar la implementación de intervenciones más pertinentes.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 bg-plan-blue text-white p-2 rounded-xl text-center text-[10px] font-medium shadow-sm">
+                    <i class="fas fa-chart-line text-plan-yellow"></i> <strong>Valor agregado del componente:</strong> Transforma los resultados del análisis en evidencia técnica para orientar la planeación, el ajuste de la oferta programática y la toma de decisiones.
+                </div>
+            </div>
+
+        </div>
+    </section>
+</div>
+
+<script>
+    let currentView = 0;
+    const totalViews = 4;
+    let chartsInitialized = false;
+
+    function switchView(viewIndex) {
+        currentView = viewIndex;
+        for (let i = 0; i < totalViews; i++) {
+            const section = document.getElementById(`view-${i}`);
+            const btn = document.getElementById(`btn-view-${i}`);
+            if (section && btn) {
+                if (i === viewIndex) {
+                    section.classList.add('active');
+                    btn.classList.add('active');
+                } else {
+                    section.classList.remove('active');
+                    btn.classList.remove('active');
+                }
+            }
+        }
+        if (viewIndex === 0 && !chartsInitialized) {
+            initCharts();
+            chartsInitialized = true;
+        }
+    }
+
+    const evolutionLevelsData = {
+        1: {
+            title: '<i class="fas fa-file-alt text-plan-blue"></i> Nivel 1: Análisis de oferta programática (Avance actual)',
+            desc: 'Punto de partida ya desarrollado para comprender la oferta pública de desarrollo económico y formular recomendaciones iniciales.',
+            features: [
+                'Caracterización de programas, instrumentos y servicios',
+                'Identificación de complementariedades y vacíos',
+                'Niveles 0–5 de recomendación institucional',
+                'Base metodológica construida desde 2023',
+                'Foco actual: oferta central distrital'
+            ],
+            footer: '<i class="fas fa-bullseye"></i> Avance consolidado en la gestión distrital.',
+            showMap: false
+        },
+        2: {
+            title: '<i class="fas fa-users text-cyan-700"></i> Nivel 2: Robustecimiento del análisis de necesidades y beneficiarios (Siguiente desarrollo)',
+            desc: 'Siguiente capa para relacionar la oferta con personas, unidades productivas y trayectorias de atención, articulándose con la BMUP.',
+            features: [
+                'Diagnóstico de necesidades y demanda potencial',
+                'Base de datos de beneficiarios a mediano plazo y trayectorias de atención',
+                'Articulación Ruta ⇄ BMUP e Intersección con UP360',
+                'Seguimiento de potenciales, vinculados y atendidos',
+                'Focalización, análisis longitudinal y relación persona · UP · oferta'
+            ],
+            footer: '<i class="fas fa-link"></i> Intersección crítica con UP360 / BMUP.',
+            showMap: false
+        },
+        3: {
+            title: '<i class="fas fa-map-marked-alt text-teal-700"></i> Nivel 3: Dotacionales productivos y servicios modulares (Evolución estratégica)',
+            desc: 'Nivel estratégico que integra las capas anteriores para planificar el acceso a servicios de desarrollo económico según realidades territoriales.',
+            features: [
+                'Análisis de dotacionales productivos y planeación territorial multiescalar',
+                'Servicios modulares, escalables basados en evidencia territorial',
+                'Articulación con oferta pública, privada y tercer sector',
+                'Costo-eficiencia e idoneidad de la oferta',
+                'Soporte analítico para POT y modelos de ocupación territorial'
+            ],
+            footer: '<i class="fas fa-star"></i> Planificación integral del desarrollo económico basado en territorio.',
+            showMap: true
+        }
+    };
+
+    function selectEvolutionLevel(lvlNum) {
+        for(let i=1; i<=3; i++) {
+            document.getElementById(`lvl-tab-${i}`).className = "level-tab bg-white border border-slate-200 rounded-xl p-2.5 cursor-pointer text-center shadow-xs flex flex-col items-center gap-1";
+        }
+        const activeTab = document.getElementById(`lvl-tab-${lvlNum}`);
+        activeTab.className = "level-tab active-level bg-blue-50 border-2 border-plan-blue rounded-xl p-2.5 cursor-pointer text-center shadow-xs flex flex-col items-center gap-1";
+        
+        const data = evolutionLevelsData[lvlNum];
+        document.getElementById('lvl-title').innerHTML = data.title;
+        document.getElementById('lvl-desc').innerText = data.desc;
+        
+        let featsHtml = '';
+        data.features.forEach(f => {
+            featsHtml += `<div><i class="fas fa-check-circle text-plan-cyan"></i> ${f}</div>`;
+        });
+        document.getElementById('lvl-features').innerHTML = featsHtml;
+        document.getElementById('lvl-footer').innerHTML = data.footer;
+
+        const mapBg = document.getElementById('bg-map-illustration');
+        if (data.showMap) {
+            mapBg.classList.remove('hidden');
+        } else {
+            mapBg.classList.add('hidden');
+        }
+    }
+
+    const ringCardsData = {
+        1: "<strong>1. Núcleo 2023:</strong> Metodología base de análisis de oferta programática (ICOP • Triangulación • Recomendaciones iniciales).",
+        2: "<strong>2. Ampliación Temática:</strong> Inclusión de la oferta distrital de empleabilidad. Complementa la lectura de acceso a servicios de desarrollo económico.",
+        3: "<strong>3. Ampliación Territorial:</strong> Oferta de desarrollo productivo y empleabilidad a nivel local. Lectura por localidades y diferencias territoriales.",
+        4: "<strong>4. Armonización Multinivel:</strong> Articulación con oferta nacional no armonizada. Comparabilidad, complementariedad y coordinación sistémica.",
+        5: "<strong>5. Evolución Avanzada:</strong> Servicios modulares y dotacionales productivos. Planificación del acceso efectivo a servicios.",
+        6: "<strong>6. Horizonte Estratégico:</strong> Planificación integral de los servicios de desarrollo económico (local, metropolitana, regional, nacional) articulada con POT."
+    };
+
+    function selectRingCard(cardNum) {
+        for(let i=1; i<=6; i++) {
+            document.getElementById(`rc-${i}`).className = "ring-card bg-teal-700 text-white font-bold p-1.5 rounded-lg cursor-pointer shadow-xs flex items-center justify-center gap-1";
+        }
+        document.getElementById(`rc-${cardNum}`).className = "ring-card active-ring bg-plan-blue text-white font-bold p-1.5 rounded-lg cursor-pointer shadow-xs flex items-center justify-center gap-1";
+        document.getElementById('ring-card-desc').innerHTML = ringCardsData[cardNum];
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        switchView(0);
+    });
+
+    function initCharts() {
+        const ctxBudget = document.getElementById('budgetChart');
+        if (ctxBudget) {
+            new Chart(ctxBudget, {
+                type: 'bar',
+                data: {
+                    labels: ['2023', '2024', '2025'],
+                    datasets: [{
+                        label: 'Presupuesto',
+                        data: [144068446269, 126715587227, 116448692300],
+                        backgroundColor: ['#002855', '#00A3E0', '#008080'],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: { right: 90 }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' $' + context.parsed.x.toLocaleString('es-CO');
+                                }
+                            }
+                        },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'right',
+                            formatter: function(value) {
+                                return '$' + value.toLocaleString('es-CO');
+                            },
+                            font: { size: 9, weight: 'bold', family: 'Inter' },
+                            color: '#1e293b'
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            beginAtZero: true, 
+                            grid: { display: false },
+                            ticks: { display: false },
+                            max: 180000000000 
+                        },
+                        y: { 
+                            grid: { display: false },
+                            ticks: { font: { size: 10, weight: 'bold' } }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        const ctxTerritorial = document.getElementById('territorialChart');
+        if (ctxTerritorial) {
+            new Chart(ctxTerritorial, {
+                type: 'bar',
+                data: {
+                    labels: ['2023', '2024', '2025'],
+                    datasets: [
+                        { label: 'Urbano', data: [54, 41, 31], backgroundColor: '#002855', borderRadius: 4 },
+                        { label: 'Rural', data: [22, 12, 7], backgroundColor: '#00A3E0', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { size: 9 } } },
+                        tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y + ' programas'; } } }
+                    },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        const ctxPop = document.getElementById('populationChart');
+        if (ctxPop) {
+            new Chart(ctxPop, {
+                type: 'bar',
+                data: {
+                    labels: [
+                        'Indígena', 'Rom', 'Raizal/Afro', 'Mujeres', 
+                        'Migrante', 'Discapacidad', 'LGTBIQ+', 'Víctimas', 
+                        'Reinsertada', 'Jóvenes', 'Mayores', 'Pobreza', 'Priv. Libertad'
+                    ],
+                    datasets: [
+                        { label: '2023', data: [9, 4, 7, 12, 5, 9, 8, 9, 2, 7, 6, 1, 1], backgroundColor: '#002855', borderRadius: 2 },
+                        { label: '2024', data: [9, 5, 6, 12, 3, 10, 7, 9, 2, 12, 11, 1, 0], backgroundColor: '#00A3E0', borderRadius: 2 },
+                        { label: '2025', data: [11, 8, 9, 11, 5, 11, 9, 14, 8, 11, 10, 7, 0], backgroundColor: '#008080', borderRadius: 2 }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { size: 9 } } },
+                        tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.x + ' programas'; } } }
+                    },
+                    scales: {
+                        x: { beginAtZero: true, max: 15, ticks: { stepSize: 2 } },
+                        y: { ticks: { font: { size: 8 } } }
+                    }
+                }
+            });
+        }
+    }
+</script>
+</body>
+</html>
